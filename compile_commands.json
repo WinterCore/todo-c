@@ -1,0 +1,7 @@
+[
+    {
+        "directory": "./",
+        "arguments": ["/usr/bin/clang++", "-Wall", "-Wextra", "-std=c11", "-ggdb"],
+        "file": "src/main.c"
+    }
+]
