@@ -4,6 +4,6 @@
 #ifndef RENDER
 #define RENDER
 
-void render(struct Todo **todos, size_t num_todos, size_t selected);
+void render(WINDOW *win, struct Todo **todos, size_t num_todos, size_t selected);
 
 #endif

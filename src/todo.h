@@ -21,6 +21,9 @@ struct Todo* parse_todo(char **data);
 
 struct Todo** parse(size_t *num_todos, char *data);
 
-struct Todo* create_todo(char *str);
+struct Todo* create_todo(char *str, enum TodoStatus status);
+
+void toggle_todo_status(struct Todo* todo);
+void delete_todo(struct Todo* todo);
 
 #endif

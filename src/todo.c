@@ -21,9 +21,7 @@ bool is_whitespace(const char *c) {
     return *c == ' ' || *c == '\n';
 }
 
-struct Todo* consume_todo(const char *todo_status_label, char **data) {
-    struct Todo *todo = malloc(sizeof(Todo));
-
+char *consume_todo_text(const char *todo_status_label, char **data) {
     size_t label_len = strlen(todo_status_label);
     *data += label_len + 2;
     size_t datalen = skip_while(is_not_eol, *data);
@@ -32,10 +30,8 @@ struct Todo* consume_todo(const char *todo_status_label, char **data) {
     todo_data[datalen] = '\0';
 
     *data += datalen + 1;
-    todo->data = todo_data;
-    todo->status = Todo;
 
-    return todo;
+    return todo_data;
 }
 
 struct Todo* parse_todo(char **data) {
@@ -47,9 +43,15 @@ struct Todo* parse_todo(char **data) {
     data += skip_while(is_whitespace, *data);
 
     if (starts_with(*data, todo_status)) {
-        return consume_todo(todo_status, data);
+
+        char *text = consume_todo_text(todo_status, data);
+        return create_todo(text, Todo);
+
     } else if (starts_with(*data, completed_status)) {
-        return consume_todo(completed_status, data);
+
+        char *text = consume_todo_text(completed_status, data);
+        return create_todo(text, Completed);
+
     }
 
     fprintf(stderr, "ERROR: CORRUPT DATA FILE\n");
@@ -98,13 +100,27 @@ struct Todo** parse(size_t *num_todos, char *data) {
     return result;
 }
 
-struct Todo* create_todo(char *str) {
+struct Todo* create_todo(char *str, enum TodoStatus status) {
     struct Todo *todo = malloc(sizeof(Todo));
-    todo->status = Todo;
+    todo->status = status;
     todo->data = str;
     return todo;
 }
 
+void toggle_todo_status(struct Todo* todo) {
+    switch (todo->status) {
+        case Todo: {
+           todo->status = Completed;
+           break;
+        };
+        case Completed: {
+           todo->status = Todo;
+           break;
+        };
+    }
+}
+
 void delete_todo(struct Todo* todo) {
+    free(todo->data);
     free(todo);
 }
