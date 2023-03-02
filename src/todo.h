@@ -17,8 +17,10 @@ struct Todo {
 
 const char* getTodoStatusName(enum TodoStatus status);
 
-struct Todo* parse_todo(char *data);
+struct Todo* parse_todo(char **data);
 
-void parse(struct Todo todos[], size_t num_todos, char *data);
+struct Todo** parse(size_t *num_todos, char *data);
+
+struct Todo* create_todo(char *str);
 
 #endif

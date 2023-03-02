@@ -1,8 +1,8 @@
-#include "aids.h"
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 #include <sys/stat.h>
+#include "aids.h"
 
 /**
  * Open a file in rw mode and create it if doesn't exist
@@ -35,4 +35,16 @@ bool starts_with(const char *haystack, const char *needle) {
     size_t n = strlen(needle);
 
     return strncmp(haystack, needle, n) == 0;
+}
+
+
+size_t skip_while(bool (*predicate)(const char *), char *data) {
+    size_t len = 0;
+
+    while (predicate(data)) {
+        len += 1;
+        data += 1;
+    }
+
+    return len;
 }
