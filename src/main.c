@@ -11,7 +11,7 @@
 #include <unistd.h>
 
 WINDOW *create_new_win(int x, int y, int w, int h) {
-    WINDOW *win = newwin(h, w, x, y);
+    WINDOW *win = newwin(h, w, y, x);
     box(win, 0, 0);
     wrefresh(win);
     return win;
@@ -33,9 +33,11 @@ int main() {
 
     initscr();
     start_color();
+    noecho();
     use_default_colors();
     init_pair(0, COLOR_WHITE, COLOR_BLACK);
     init_pair(1, COLOR_BLACK, COLOR_CYAN);
+    init_pair(2, COLOR_BLACK, COLOR_YELLOW);
 
     int halfw = COLS / 2;
 
@@ -49,15 +51,15 @@ int main() {
 
         int c = wgetch(left);
         switch (c) {
-            case (int) 'q':
-            case (int) 'Q': {
+            case 'q':
+            case 'Q': {
                 exit = true;
                 break;
             };
 
             case KEY_UP:
-            case (int) 'k':
-            case (int) 'K': {
+            case 'k':
+            case 'K': {
                 if (selected > 0) {
                     selected -= 1;
                 }
@@ -66,8 +68,8 @@ int main() {
             };
 
             case KEY_DOWN:
-            case (int) 'j':
-            case (int) 'J': {
+            case 'j':
+            case 'J': {
                 if (selected < num_todos - 1) {
                     selected += 1;
                 }
@@ -75,6 +77,39 @@ int main() {
                 break;
             };
 
+            case 'd':
+            case 'D': {
+                if (num_todos == 0) {
+                    break;
+                }
+
+                delete_todo(todos[selected]);
+
+                // Check if the removed todo is the last one
+                if (selected < num_todos - 1) {
+                    memmove(
+                        todos + selected,
+                        todos + selected + 1,
+                        (num_todos - (selected + 1)) * sizeof(**todos)
+                    );
+                }
+
+                num_todos -= 1;
+
+                if (selected >= num_todos) {
+                    selected -= 1;
+                }
+
+                break;
+            };
+
+            case 'n':
+            case 'N': {
+                char *text = prompt_text_dialog();
+
+                free(text);
+                break;
+            };
             case ' ':
             case '\n':
             case KEY_ENTER: {
