@@ -5,10 +5,11 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <ncurses.h>
+#include <unistd.h>
 #include "aids.h"
 #include "todo.h"
 #include "render.h"
-#include <unistd.h>
+#include "hector.h"
 
 WINDOW *create_new_win(int x, int y, int w, int h) {
     WINDOW *win = newwin(h, w, y, x);
@@ -25,11 +26,9 @@ int main() {
     strcat(path, file);
 
     FILE *fd = open_file_rw(path);
-    char *data = read_file(fd);
 
-    size_t num_todos = 0;
     size_t selected = 0;
-    struct Todo **todos = parse(&num_todos, data);
+    struct Hector *todos = read_todos(fd);
 
     initscr();
     start_color();
@@ -38,7 +37,6 @@ int main() {
     init_pair(0, COLOR_WHITE, COLOR_BLACK);
     init_pair(1, COLOR_BLACK, COLOR_CYAN);
     init_pair(2, COLOR_BLACK, COLOR_YELLOW);
-
     int halfw = COLS / 2;
 
     WINDOW *left = create_new_win(0, 0, halfw, LINES);
@@ -47,7 +45,7 @@ int main() {
     bool exit = false;
     
     while (! exit) {
-        render(left, todos, num_todos, selected);
+        render(left, todos, selected);
 
         int c = wgetch(left);
         switch (c) {
@@ -70,7 +68,7 @@ int main() {
             case KEY_DOWN:
             case 'j':
             case 'J': {
-                if (selected < num_todos - 1) {
+                if (selected < todos->length - 1) {
                     selected += 1;
                 }
 
@@ -79,24 +77,14 @@ int main() {
 
             case 'd':
             case 'D': {
-                if (num_todos == 0) {
+                if (todos->length == 0) {
                     break;
                 }
 
-                delete_todo(todos[selected]);
+                delete_todo(hector_get(todos, selected));
+                hector_splice(todos, selected, 1);
 
-                // Check if the removed todo is the last one
-                if (selected < num_todos - 1) {
-                    memmove(
-                        todos + selected,
-                        todos + selected + 1,
-                        (num_todos - (selected + 1)) * sizeof(**todos)
-                    );
-                }
-
-                num_todos -= 1;
-
-                if (selected >= num_todos) {
+                if (selected >= hector_size(todos)) {
                     selected -= 1;
                 }
 
@@ -105,15 +93,15 @@ int main() {
 
             case 'n':
             case 'N': {
-                char *text = prompt_text_dialog();
-
-                free(text);
+                char *text = prompt_text_dialog(MAX_TODO_TEXT_LEN);
+                struct Todo *todo = create_todo(text, Todo);
+                hector_push(todos, &todo);
                 break;
             };
             case ' ':
             case '\n':
             case KEY_ENTER: {
-                toggle_todo_status(todos[selected]);
+                toggle_todo_status(hector_get(todos, selected));
 
                 break;
             };

@@ -31,6 +31,12 @@ char *read_file(FILE *fd) {
     return buffer;
 }
 
+void write_file(FILE *fd, char *data) {
+    fseek(fd, 0, SEEK_SET);
+    int len = strlen(data);
+    fwrite(data, 1, sizeof(char) * len, fd);
+}
+
 bool starts_with(const char *haystack, const char *needle) {
     size_t n = strlen(needle);
 

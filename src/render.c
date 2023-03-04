@@ -2,13 +2,11 @@
 #include <ncurses.h>
 #include <stdlib.h>
 #include "render.h"
-#include "todo.h"
 #include "aids.h"
 
 void render(
     WINDOW *win,
-    struct Todo **todos,
-    size_t num_todos,
+    struct Hector *todos,
     size_t selected
 ) {
     size_t i = 0;
@@ -24,7 +22,7 @@ void render(
     getmaxyx(win, rows, cols);
 
     // Render todos
-    while (i < num_todos) {
+    while (i < todos->length) {
         if (selected == i) {
             wattron(win, COLOR_PAIR(1));
             draw_backlight(win, padding, selected_y, cols - padding * 2, 1);
@@ -34,7 +32,8 @@ void render(
 
         wmove(win, y, padding);
         waddstr(win, "[ ");
-        if (todos[i]->status == Completed) {
+        struct Todo *todo = hector_get(todos, i);
+        if (todo->status == Completed) {
             wmove(win, y, 1 + padding);
             waddstr(win, "x");
         }
@@ -43,7 +42,7 @@ void render(
         waddstr(win, "]: ");
 
         wmove(win, y, 5 + padding);
-        waddstr(win, todos[i]->data);
+        waddstr(win, todo->data);
 
         if (selected == i) {
             wattroff(win, COLOR_PAIR(1));
@@ -61,9 +60,8 @@ void render(
     wrefresh(win);
 }
 
-const int PROMPT_MAX_TEXT_LEN = 200;
-char *prompt_text_dialog() {
-    char *buffer = malloc(sizeof(char) * PROMPT_MAX_TEXT_LEN + 1);
+char *prompt_text_dialog(const int max_len) {
+    char *buffer = malloc(sizeof(char) * max_len + 1);
     int w = 60;
     int h = 6;
     int x = (COLS - w) / 2;
@@ -100,10 +98,11 @@ char *prompt_text_dialog() {
         wrefresh(win);
 
         int c = wgetch(win);
+
         switch (c) {
             case KEY_ENTER:
             case '\n': {
-                break;
+                return buffer;
             };
 
             case KEY_BACKSPACE:

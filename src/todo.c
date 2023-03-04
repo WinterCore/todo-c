@@ -1,8 +1,7 @@
-#include "todo.h"
-#include "aids.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "todo.h"
 
 const char* getTodoStatusName(enum TodoStatus status) {
     switch (status) {
@@ -12,6 +11,7 @@ const char* getTodoStatusName(enum TodoStatus status) {
 
     UNREACHABLE
 }
+
 
 bool is_not_eol(const char *c) {
     return *c != '\n' && *c != EOF;
@@ -58,46 +58,42 @@ struct Todo* parse_todo(char **data) {
     UNREACHABLE
 }
 
-const size_t BUFFER_SIZE = 100;
 
-struct Todo** parse(size_t *num_todos, char *data) {
-    struct Todo **result = malloc(0);
-    struct Todo **buffer = malloc(sizeof(struct Todo*) * BUFFER_SIZE);
-    size_t i = 0;
+struct Hector *read_todos(FILE *fd) {
+    char *data_ptr = read_file(fd);
+    char *data = data_ptr;
+
+    struct Hector *hec = hector_create(sizeof(struct Todo *), 5);
 
     while (*data != '\0') {
         struct Todo *todo = parse_todo(&data);
 
-        buffer[i % BUFFER_SIZE] = todo;
-
-        i += 1;
-
-        if (i != 0 && i % BUFFER_SIZE == 0) {
-            size_t chunk = i / BUFFER_SIZE;
-            result = realloc(result, sizeof(struct Todo*) * BUFFER_SIZE * chunk);
-            memcpy(result + i - BUFFER_SIZE, buffer, chunk);
-        }
+        hector_push(hec, &todo);
     }
 
+    free(data_ptr);
+    return hec;
+}
 
-    if (i % BUFFER_SIZE > 0) {
-        size_t new_size = (sizeof(struct Todo*) * BUFFER_SIZE * (i / BUFFER_SIZE)) +
-                          (sizeof(struct Todo*) * (i % BUFFER_SIZE));
+void write_todos(FILE *fd, struct Todo **todos, size_t num_todos) {
+    fseek(fd, 0, SEEK_SET);
+    char *buffer = malloc(sizeof(char) * (MAX_TODO_TEXT_LEN + 50));
 
-
-        result = realloc(result, new_size);
-        memcpy(
-            result + (i / BUFFER_SIZE) * BUFFER_SIZE,
-            buffer,
-            sizeof(struct Todo*) * (i % BUFFER_SIZE)
-        );
+    int p = 0;
+    for (size_t i = 0; i < num_todos; i += 1) {
+        const char *label = getTodoStatusName(todos[i]->status);
+        int label_len = strlen(label);
+        strncpy(buffer, label, label_len);
+        strcpy(buffer + label_len, ": ");
+        int text_len = strlen(todos[i]->data);
+        strcpy(buffer + label_len + 2, todos[i]->data);
+        buffer[label_len + 2 + text_len + 1] = '\n';
+        p += label_len + 2 + text_len + 1;
     }
 
-
-    *num_todos = i;
+    buffer[p + 1] = '\0';
+    fwrite(buffer, 1, strlen(buffer), fd);
     free(buffer);
-
-    return result;
 }
 
 struct Todo* create_todo(char *str, enum TodoStatus status) {
@@ -117,7 +113,12 @@ void toggle_todo_status(struct Todo* todo) {
            todo->status = Todo;
            break;
         };
+        default: {
+            UNREACHABLE
+            break;
+        };
     }
+
 }
 
 void delete_todo(struct Todo* todo) {
