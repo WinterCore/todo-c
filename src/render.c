@@ -1,6 +1,7 @@
 #include <curses.h>
 #include <ncurses.h>
 #include <stdlib.h>
+#include "hector.h"
 #include "render.h"
 #include "aids.h"
 
@@ -140,5 +141,102 @@ void draw_backlight(WINDOW *win, int x, int y, int w, int h) {
             wmove(win, y + row, x + col);
             waddch(win, ' ');
         }
+    }
+}
+
+void render_pane(
+    struct State *state,
+    WINDOW *win,
+    struct Hector *todos,
+    size_t *selected
+) {
+    render(win, todos, *selected);
+
+    int c = wgetch(win);
+
+    switch (c) {
+        case 'q':
+        case 'Q': {
+            state->exit = true;
+            break;
+        };
+
+        case KEY_UP:
+        case 'k':
+        case 'K': {
+            if (*selected > 0) {
+                *selected -= 1;
+            }
+
+            break;
+        };
+
+        case KEY_DOWN:
+        case 'j':
+        case 'J': {
+            if (*selected < todos->length - 1) {
+                *selected += 1;
+            }
+
+            break;
+        };
+
+        case 'd':
+        case 'D': {
+            if (todos->length == 0) {
+                break;
+            }
+
+            delete_todo(hector_get(todos, *selected));
+            hector_splice(todos, *selected, 1);
+
+            if (*selected >= hector_size(todos)) {
+                *selected -= 1;
+            }
+
+            state->should_write_to_disk = true;
+
+            break;
+        };
+
+        case 'n':
+        case 'N': {
+            char *text = prompt_text_dialog(MAX_TODO_TEXT_LEN);
+            struct Todo *todo = create_todo(text, Todo);
+            hector_push(todos, todo);
+            state->should_do_full_render = true;
+            state->should_write_to_disk = true;
+
+            break;
+        };
+
+        case '\n':
+        case KEY_ENTER: {
+            struct Todo *todo = hector_get(todos, *selected);
+            toggle_todo_status(todo);
+
+            if (todo->status == Todo) {
+                hector_splice(todos, *selected, 1);
+                hector_push(state->pending_todos, todo);
+            } else if (todo->status == Completed) {
+                hector_splice(todos, *selected, 1);
+                hector_push(state->completed_todos, todo);
+            }
+
+            if (*selected >= hector_size(todos)) {
+                *selected -= 1;
+            }
+
+            state->should_do_full_render = true;
+            state->should_write_to_disk = true;
+
+            break;
+        };
+
+        case ' ': {
+            state->pane += 1;
+
+            break;
+        };
     }
 }

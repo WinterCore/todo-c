@@ -22,5 +22,6 @@ void *hector_pop(struct Hector *hec);
 void *hector_get(struct Hector *hec, size_t n);
 void hector_splice(struct Hector *hec, size_t n, size_t count);
 size_t hector_size(struct Hector *hec);
+void hector_destroy(struct Hector *hec);
 
 #endif

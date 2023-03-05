@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "hector.h"
 #include "todo.h"
 
-const char* getTodoStatusName(enum TodoStatus status) {
+const char* get_todo_status_name(enum TodoStatus status) {
     switch (status) {
         case Todo: return "TODO";
         case Completed: return "COMPLETED";
@@ -36,8 +37,8 @@ char *consume_todo_text(const char *todo_status_label, char **data) {
 
 struct Todo* parse_todo(char **data) {
     
-    const char *todo_status = getTodoStatusName(Todo);
-    const char *completed_status = getTodoStatusName(Completed);
+    const char *todo_status = get_todo_status_name(Todo);
+    const char *completed_status = get_todo_status_name(Completed);
 
     // Skip whitespace
     data += skip_while(is_whitespace, *data);
@@ -68,30 +69,48 @@ struct Hector *read_todos(FILE *fd) {
     while (*data != '\0') {
         struct Todo *todo = parse_todo(&data);
 
-        hector_push(hec, &todo);
+        hector_push(hec, todo);
     }
 
     free(data_ptr);
     return hec;
 }
 
-void write_todos(FILE *fd, struct Todo **todos, size_t num_todos) {
-    fseek(fd, 0, SEEK_SET);
+struct Hector *filter_todos(struct Hector *todos, enum TodoStatus status) {
+    struct Hector *result = hector_create(sizeof(struct Todo *), 1);
+
+    size_t len = hector_size(todos);
+    for (size_t i = 0; i < len; i += 1) {
+        struct Todo *todo = hector_get(todos, i);
+        if (todo->status == status) {
+            hector_push(result, todo);
+        }
+    }
+
+    return result;
+}
+
+void write_todos(FILE *fd, struct Hector *todos) {
     char *buffer = malloc(sizeof(char) * (MAX_TODO_TEXT_LEN + 50));
 
     int p = 0;
-    for (size_t i = 0; i < num_todos; i += 1) {
-        const char *label = getTodoStatusName(todos[i]->status);
+    size_t len = hector_size(todos);
+    for (size_t i = 0; i < len; i += 1) {
+        struct Todo *todo = hector_get(todos, i);
+        const char *label = get_todo_status_name(todo->status);
         int label_len = strlen(label);
         strncpy(buffer, label, label_len);
         strcpy(buffer + label_len, ": ");
-        int text_len = strlen(todos[i]->data);
-        strcpy(buffer + label_len + 2, todos[i]->data);
+        int text_len = strlen(todo->data);
+        strcpy(buffer + label_len + 2, todo->data);
         buffer[label_len + 2 + text_len + 1] = '\n';
-        p += label_len + 2 + text_len + 1;
+        p += label_len + 2 + text_len + 2;
     }
+    buffer[p] = '\0';
 
-    buffer[p + 1] = '\0';
+    printf("%s", buffer);
+    fflush(stdout);
+
     fwrite(buffer, 1, strlen(buffer), fd);
     free(buffer);
 }

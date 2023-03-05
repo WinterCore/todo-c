@@ -25,7 +25,9 @@ const char *getTodoStatusName(enum TodoStatus status);
 struct Todo *parse_todo(char **data);
 
 struct Hector *read_todos(FILE *fd);
-void write_todos(FILE *fd, struct Todo **todos, size_t num_todos);
+void write_todos(FILE *fd, struct Hector *todos);
+
+struct Hector *filter_todos(struct Hector *todos, enum TodoStatus status);
 
 struct Todo *create_todo(char *str, enum TodoStatus status);
 

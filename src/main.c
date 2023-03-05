@@ -27,8 +27,10 @@ int main() {
 
     FILE *fd = open_file_rw(path);
 
-    size_t selected = 0;
     struct Hector *todos = read_todos(fd);
+    struct Hector *pending_todos = filter_todos(todos, Todo);
+    struct Hector *completed_todos = filter_todos(todos, Completed);
+    hector_destroy(todos);
 
     initscr();
     start_color();
@@ -40,71 +42,43 @@ int main() {
     int halfw = COLS / 2;
 
     WINDOW *left = create_new_win(0, 0, halfw, LINES);
+    WINDOW *right = create_new_win(halfw, 0, halfw, LINES);
     keypad(left, true);
+    keypad(right, true);
 
-    bool exit = false;
+    unsigned int active_pane = 0;
+    size_t selected_left = 0;
+    size_t selected_right = 0;
+
+    struct State state = {
+        .pending_todos = pending_todos,
+        .completed_todos = completed_todos,
+        .exit = false,
+        .pane = active_pane,
+        .should_do_full_render = true,
+        .should_write_to_disk = false
+    };
     
-    while (! exit) {
-        render(left, todos, selected);
+    while (! state.exit) {
+        if (state.should_do_full_render) {
+            render(left, pending_todos, selected_left);
+            render(right, completed_todos, selected_right);
+            state.should_do_full_render = false;
+        }
 
-        int c = wgetch(left);
-        switch (c) {
-            case 'q':
-            case 'Q': {
-                exit = true;
-                break;
-            };
+        /*
+        if (state.should_write_to_disk) {
+            ftruncate(fileno(fd), 0);
+            fseek(fd, 0, SEEK_SET);
+            write_todos(fd, state.pending_todos);
+            write_todos(fd, state.completed_todos);
+        }
+        */
 
-            case KEY_UP:
-            case 'k':
-            case 'K': {
-                if (selected > 0) {
-                    selected -= 1;
-                }
-
-                break;
-            };
-
-            case KEY_DOWN:
-            case 'j':
-            case 'J': {
-                if (selected < todos->length - 1) {
-                    selected += 1;
-                }
-
-                break;
-            };
-
-            case 'd':
-            case 'D': {
-                if (todos->length == 0) {
-                    break;
-                }
-
-                delete_todo(hector_get(todos, selected));
-                hector_splice(todos, selected, 1);
-
-                if (selected >= hector_size(todos)) {
-                    selected -= 1;
-                }
-
-                break;
-            };
-
-            case 'n':
-            case 'N': {
-                char *text = prompt_text_dialog(MAX_TODO_TEXT_LEN);
-                struct Todo *todo = create_todo(text, Todo);
-                hector_push(todos, &todo);
-                break;
-            };
-            case ' ':
-            case '\n':
-            case KEY_ENTER: {
-                toggle_todo_status(hector_get(todos, selected));
-
-                break;
-            };
+        if (state.pane % 2 == 0) {
+            render_pane(&state, left, pending_todos, &selected_left);
+        } else if (state.pane % 2 == 1) {
+            render_pane(&state, right, completed_todos, &selected_right);
         }
     }
 

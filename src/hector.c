@@ -21,7 +21,11 @@ void hector_push(struct Hector *hec, void *item) {
         hec->capacity = new_capacity;
     }
 
-    memcpy(hec->mem + (hec->length * hec->elem_size), item, hec->elem_size);
+    memcpy(
+        hec->mem + (hec->length * hec->elem_size),
+        &item,
+        hec->elem_size
+    );
     hec->length += 1;
 }
 
@@ -65,4 +69,9 @@ void *hector_get(struct Hector *hec, size_t n) {
 
 size_t hector_size(struct Hector *hec) {
     return hec->length;
+}
+
+void hector_destroy(struct Hector *hec) {
+    free(hec->mem);
+    free(hec);
 }
