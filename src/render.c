@@ -144,7 +144,7 @@ void draw_backlight(WINDOW *win, int x, int y, int w, int h) {
     }
 }
 
-void render_pane(
+void pane_loop(
     struct State *state,
     WINDOW *win,
     struct Hector *todos,
@@ -190,7 +190,9 @@ void render_pane(
             delete_todo(hector_get(todos, *selected));
             hector_splice(todos, *selected, 1);
 
-            if (*selected >= hector_size(todos)) {
+            size_t todos_num = hector_size(todos);
+
+            if (*selected >= todos_num && todos_num > 0) {
                 *selected -= 1;
             }
 
@@ -203,7 +205,7 @@ void render_pane(
         case 'N': {
             char *text = prompt_text_dialog(MAX_TODO_TEXT_LEN);
             struct Todo *todo = create_todo(text, Todo);
-            hector_push(todos, todo);
+            hector_push(state->pending_todos, todo);
             state->should_do_full_render = true;
             state->should_write_to_disk = true;
 
@@ -212,6 +214,10 @@ void render_pane(
 
         case '\n':
         case KEY_ENTER: {
+            if (todos->length == 0) {
+                break;
+            }
+
             struct Todo *todo = hector_get(todos, *selected);
             toggle_todo_status(todo);
 
@@ -223,7 +229,9 @@ void render_pane(
                 hector_push(state->completed_todos, todo);
             }
 
-            if (*selected >= hector_size(todos)) {
+            size_t todos_num = hector_size(todos);
+
+            if (*selected >= todos_num && todos_num > 0) {
                 *selected -= 1;
             }
 

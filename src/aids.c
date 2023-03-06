@@ -47,7 +47,7 @@ bool starts_with(const char *haystack, const char *needle) {
 size_t skip_while(bool (*predicate)(const char *), char *data) {
     size_t len = 0;
 
-    while (predicate(data)) {
+    while (*data != '\0' && predicate(data)) {
         len += 1;
         data += 1;
     }

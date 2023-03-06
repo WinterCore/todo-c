@@ -91,14 +91,15 @@ struct Hector *filter_todos(struct Hector *todos, enum TodoStatus status) {
 }
 
 void write_todos(FILE *fd, struct Hector *todos) {
-    char *buffer = malloc(sizeof(char) * (MAX_TODO_TEXT_LEN + 50));
+    size_t len = hector_size(todos);
+    char *buffer = malloc(sizeof(char) * (MAX_TODO_TEXT_LEN + 50) * len);
 
     int p = 0;
-    size_t len = hector_size(todos);
     for (size_t i = 0; i < len; i += 1) {
         struct Todo *todo = hector_get(todos, i);
         const char *label = get_todo_status_name(todo->status);
         int label_len = strlen(label);
+
         strncpy(buffer, label, label_len);
         strcpy(buffer + label_len, ": ");
         int text_len = strlen(todo->data);
@@ -106,12 +107,13 @@ void write_todos(FILE *fd, struct Hector *todos) {
         buffer[label_len + 2 + text_len + 1] = '\n';
         p += label_len + 2 + text_len + 2;
     }
-    buffer[p] = '\0';
 
-    printf("%s", buffer);
+    /*
+    printf("potato %s", buffer);
     fflush(stdout);
+    */
 
-    fwrite(buffer, 1, strlen(buffer), fd);
+    fwrite(buffer, 1, p, fd);
     free(buffer);
 }
 

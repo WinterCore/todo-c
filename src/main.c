@@ -24,13 +24,24 @@ int main() {
     char *path = malloc(sizeof(char) * 100);
     strcat(path, directory);
     strcat(path, file);
+    FILE *fd = open_file_rw(path);
+
+    /*
+    char *buffer = malloc(sizeof(char) * 15);
+    strcpy(buffer, "hello");
+    buffer[5] = '\n';
+    strcpy(buffer + 6, "world");
+    fwrite(buffer, 1, 10, fd);
 
     FILE *fd = open_file_rw(path);
+    */
 
     struct Hector *todos = read_todos(fd);
     struct Hector *pending_todos = filter_todos(todos, Todo);
     struct Hector *completed_todos = filter_todos(todos, Completed);
     hector_destroy(todos);
+    ftruncate(fileno(fd), 0);
+    write_todos(fd, pending_todos);
 
     initscr();
     start_color();
@@ -66,19 +77,17 @@ int main() {
             state.should_do_full_render = false;
         }
 
-        /*
         if (state.should_write_to_disk) {
             ftruncate(fileno(fd), 0);
             fseek(fd, 0, SEEK_SET);
             write_todos(fd, state.pending_todos);
             write_todos(fd, state.completed_todos);
         }
-        */
 
         if (state.pane % 2 == 0) {
-            render_pane(&state, left, pending_todos, &selected_left);
+            pane_loop(&state, left, pending_todos, &selected_left);
         } else if (state.pane % 2 == 1) {
-            render_pane(&state, right, completed_todos, &selected_right);
+            pane_loop(&state, right, completed_todos, &selected_right);
         }
     }
 

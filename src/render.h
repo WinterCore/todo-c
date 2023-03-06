@@ -15,7 +15,7 @@ struct State {
 };
 
 void render(WINDOW *win, struct Hector *todos, size_t selected);
-void render_pane(
+void pane_loop(
     struct State *state,
     WINDOW *win,
     struct Hector *todos,
