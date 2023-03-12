@@ -30,10 +30,6 @@ int main() {
     struct Hector *pending_todos = filter_todos(todos, Todo);
     struct Hector *completed_todos = filter_todos(todos, Completed);
     hector_destroy(todos);
-    ftruncate(fileno(fd), 0);
-    fseek(fd, 0, SEEK_SET);
-    write_todos(fd, pending_todos);
-    write_todos(fd, completed_todos);
 
     initscr();
     start_color();
