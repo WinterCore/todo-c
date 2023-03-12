@@ -3,7 +3,6 @@
 *Simple NCurses TUI multi-pane todo list*
 
 ### TODO
-- [ ] Fix writing to disk
 - [ ] Add a label to each pane pending/completed
 - [ ] Add proper error handling for failure to parse the data file
 - [ ] Add the ability to specify the location of the data file

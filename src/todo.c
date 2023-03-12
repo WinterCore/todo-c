@@ -100,18 +100,13 @@ void write_todos(FILE *fd, struct Hector *todos) {
         const char *label = get_todo_status_name(todo->status);
         int label_len = strlen(label);
 
-        strncpy(buffer, label, label_len);
-        strcpy(buffer + label_len, ": ");
+        strncpy(p + buffer, label, label_len);
+        strcpy(p + buffer + label_len, ": ");
         int text_len = strlen(todo->data);
-        strcpy(buffer + label_len + 2, todo->data);
-        buffer[label_len + 2 + text_len + 1] = '\n';
-        p += label_len + 2 + text_len + 2;
+        strcpy(p + buffer + label_len + 2, todo->data);
+        buffer[p + label_len + 2 + text_len] = '\n';
+        p += label_len + 2 + text_len + 1;
     }
-
-    /*
-    printf("potato %s", buffer);
-    fflush(stdout);
-    */
 
     fwrite(buffer, 1, p, fd);
     free(buffer);
