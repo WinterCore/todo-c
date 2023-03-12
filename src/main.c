@@ -26,16 +26,6 @@ int main() {
     strcat(path, file);
     FILE *fd = open_file_rw(path);
 
-    /*
-    char *buffer = malloc(sizeof(char) * 15);
-    strcpy(buffer, "hello");
-    buffer[5] = '\n';
-    strcpy(buffer + 6, "world");
-    fwrite(buffer, 1, 10, fd);
-
-    FILE *fd = open_file_rw(path);
-    */
-
     struct Hector *todos = read_todos(fd);
     struct Hector *pending_todos = filter_todos(todos, Todo);
     struct Hector *completed_todos = filter_todos(todos, Completed);
@@ -74,22 +64,23 @@ int main() {
     
     while (! state.exit) {
         if (state.should_do_full_render) {
-            render(left, pending_todos, selected_left);
-            render(right, completed_todos, selected_right);
+            render(left, pending_todos, selected_left, "Todo");
+            render(right, completed_todos, selected_right, "Completed");
             state.should_do_full_render = false;
         }
 
         if (state.should_write_to_disk) {
-            ftruncate(fileno(fd), 0);
             fseek(fd, 0, SEEK_SET);
+            ftruncate(fileno(fd), 0);
             write_todos(fd, state.pending_todos);
             write_todos(fd, state.completed_todos);
+            fflush(fd);
         }
 
         if (state.pane % 2 == 0) {
-            pane_loop(&state, left, pending_todos, &selected_left);
+            pane_loop(&state, left, pending_todos, &selected_left, "Todo");
         } else if (state.pane % 2 == 1) {
-            pane_loop(&state, right, completed_todos, &selected_right);
+            pane_loop(&state, right, completed_todos, &selected_right, "Completed");
         }
     }
 

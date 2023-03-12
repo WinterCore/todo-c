@@ -8,7 +8,8 @@
 void render(
     WINDOW *win,
     struct Hector *todos,
-    size_t selected
+    size_t selected,
+    char *label
 ) {
     size_t i = 0;
 
@@ -21,6 +22,10 @@ void render(
     int selected_y = selected + padding;
 
     getmaxyx(win, rows, cols);
+
+    // Render label
+    wmove(win, 0, 1);
+    waddstr(win, label);
 
     // Render todos
     while (i < todos->length) {
@@ -63,6 +68,7 @@ void render(
 
 char *prompt_text_dialog(const int max_len) {
     char *buffer = malloc(sizeof(char) * max_len + 1);
+    buffer[0] = '\0';
     int w = 60;
     int h = 6;
     int x = (COLS - w) / 2;
@@ -80,7 +86,6 @@ char *prompt_text_dialog(const int max_len) {
         // Render Controls
         wmove(win, h - 1, 1);
         waddstr(win, " Enter: Create todo  Tab: Cycle between controls ");
-
 
         wattron(win, COLOR_PAIR(2));
         draw_backlight(
@@ -148,9 +153,10 @@ void pane_loop(
     struct State *state,
     WINDOW *win,
     struct Hector *todos,
-    size_t *selected
+    size_t *selected,
+    char *label
 ) {
-    render(win, todos, *selected);
+    render(win, todos, *selected, label);
 
     int c = wgetch(win);
 
@@ -174,7 +180,7 @@ void pane_loop(
         case KEY_DOWN:
         case 'j':
         case 'J': {
-            if (*selected < todos->length - 1) {
+            if (todos->length != 0 && *selected < todos->length - 1) {
                 *selected += 1;
             }
 

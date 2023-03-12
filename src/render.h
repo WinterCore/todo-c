@@ -14,12 +14,13 @@ struct State {
     bool should_write_to_disk;
 };
 
-void render(WINDOW *win, struct Hector *todos, size_t selected);
+void render(WINDOW *win, struct Hector *todos, size_t selected, char *label);
 void pane_loop(
     struct State *state,
     WINDOW *win,
     struct Hector *todos,
-    size_t *selected
+    size_t *selected,
+    char *label
 );
 char *prompt_text_dialog(const int max_len);
 
