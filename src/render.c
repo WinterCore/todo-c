@@ -1,6 +1,7 @@
 #include <curses.h>
 #include <ncurses.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include "hector.h"
 #include "render.h"
 #include "aids.h"
@@ -70,13 +71,14 @@ char *prompt_text_dialog(const int max_len) {
     char *buffer = malloc(sizeof(char) * max_len + 1);
     buffer[0] = '\0';
     int w = 60;
-    int h = 6;
+    int h = 8;
     int x = (COLS - w) / 2;
     int y = (LINES - h) / 2;
     int padding_y = 1;
     int padding_x = 5;
     int input_w = w - padding_x * 2;
     WINDOW *win = newwin(h, w, y, x);
+    bool cancel_selected = false;
 
     int i = 0;
     while (true) {
@@ -85,9 +87,20 @@ char *prompt_text_dialog(const int max_len) {
 
         // Render Controls
         wmove(win, h - 1, 1);
-        waddstr(win, " Enter: Create todo  Tab: Cycle between controls ");
+        waddstr(win, " Enter: Create todo | Tab: Cycle between controls ");
 
-        wattron(win, COLOR_PAIR(2));
+        if (cancel_selected) {
+            wattron(win, COLOR_PAIR(2));
+        }
+        wmove(win, h - 3, 3);
+        waddstr(win, "Cancel");
+        if (cancel_selected) {
+            wattroff(win, COLOR_PAIR(2));
+        }
+
+        if (! cancel_selected) {
+            wattron(win, COLOR_PAIR(2));
+        }
         draw_backlight(
             win,
             padding_x,
@@ -99,21 +112,36 @@ char *prompt_text_dialog(const int max_len) {
         wmove(win, padding_y + 1, padding_x);
         waddstr(win, (buffer + MAX(0, i - input_w)));
 
-        wattroff(win, COLOR_PAIR(2));
+        if (! cancel_selected) {
+            wattroff(win, COLOR_PAIR(2));
+        }
 
         wrefresh(win);
 
         int c = wgetch(win);
 
         switch (c) {
+            case KEY_STAB:
+            case '\t': {
+                cancel_selected = ! cancel_selected;
+                break;
+            };
             case KEY_ENTER:
             case '\n': {
+                if (cancel_selected) {
+                    return NULL;
+                }
+
                 return buffer;
             };
 
             case KEY_BACKSPACE:
             case '\b':
             case 127: {
+                if (cancel_selected) {
+                    break;
+                }
+
                 if (i > 0) {
                     i -= 1;
                     buffer[i] = '\0';
@@ -122,16 +150,22 @@ char *prompt_text_dialog(const int max_len) {
             };
 
             default: {
-                if (c < -128 && 127 < c) {
+                if (cancel_selected) {
+                    break;
+                }
+
+                if (! isalnum(c) && c < -128 && 127 < c) {
                     break;
                 }
 
                 if (i >= 200) {
+                    break;
                 }
 
                 buffer[i] = c;
                 buffer[i + 1] = '\0';
                 i += 1;
+                break;
             };
         }
     }
@@ -210,9 +244,14 @@ void pane_loop(
         case 'n':
         case 'N': {
             char *text = prompt_text_dialog(MAX_TODO_TEXT_LEN);
+            state->should_do_full_render = true;
+
+            if (text == NULL) {
+                break;
+            }
+
             struct Todo *todo = create_todo(text, Todo);
             hector_push(state->pending_todos, todo);
-            state->should_do_full_render = true;
             state->should_write_to_disk = true;
 
             break;
