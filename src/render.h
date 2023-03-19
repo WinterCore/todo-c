@@ -20,11 +20,15 @@ struct PaneState {
     size_t selected;
     unsigned int padding;
     char *label;
+    unsigned int scroll_pos;
 };
 
 void render_label(WINDOW *win, char *label);
 void render_controls(WINDOW *win);
-void render_todos(WINDOW *win, struct Hector *todos, size_t selected, bool active);
+void render_todos(
+    struct PaneState *state,
+    bool active
+);
 void render_pane(struct PaneState *state, bool active);
 
 void pane_loop(

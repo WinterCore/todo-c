@@ -13,7 +13,7 @@ void render_pane(
     werase(state->win);
 
     render_label(state->win, state->label);
-    render_todos(state->win, state->todos, state->selected, active);
+    render_todos(state, active);
 
     wrefresh(state->win);
 }
@@ -34,53 +34,73 @@ void render_label(WINDOW *win, char *label) {
 }
 
 void render_todos(
-    WINDOW *win,
-    struct Hector *todos,
-    size_t selected,
+    struct PaneState *ps,
     bool active
 ) {
-    size_t i = 0;
-
-    box(win, 0, 0);
+    box(ps->win, 0, 0);
     int cols = 0;
     int rows = 0;
-    int padding = 1;
-    int selected_y = selected + padding;
+    getmaxyx(ps->win, rows, cols);
+    int viewport_lines = rows - (ps->padding * 2);
+    size_t todos_size = hector_size(ps->todos);
 
-    getmaxyx(win, rows, cols);
+    if (ps->selected >= viewport_lines + ps->scroll_pos) {
+        ps->scroll_pos += 1;
+    }
+
+    if (ps->selected < ps->scroll_pos) {
+        ps->scroll_pos -= 1;
+    }
+
+    if (ps->scroll_pos > todos_size - viewport_lines) {
+        ps->scroll_pos = todos_size - viewport_lines;
+    }
+
+    int selected_y = (ps->selected - ps->scroll_pos) + ps->padding;
+
+    size_t i = 0;
+    size_t j = ps->scroll_pos;
+    size_t l = MIN(todos_size, rows - (ps->padding * 2));
 
     // Render todos
-    while (i < todos->length) {
-        if (active && selected == i) {
-            wattron(win, COLOR_PAIR(1));
-            draw_backlight(win, padding, selected_y, cols - padding * 2, 1);
+    while (i < l) {
+        if (active && ps->selected == j) {
+            wattron(ps->win, COLOR_PAIR(1));
+            draw_backlight(
+                ps->win,
+                ps->padding,
+                selected_y,
+                cols - ps->padding * 2,
+                1
+            );
         }
         
-        int y = i + padding;
+        int y = i + ps->padding;
 
-        wmove(win, y, padding);
-        waddstr(win, "[ ");
-        struct Todo *todo = hector_get(todos, i);
+        wmove(ps->win, y, ps->padding);
+        waddstr(ps->win, "[ ");
+        struct Todo *todo = hector_get(ps->todos, j);
         if (todo->status == Completed) {
-            wmove(win, y, 1 + padding);
-            waddstr(win, "x");
+            wmove(ps->win, y, 1 + ps->padding);
+            waddstr(ps->win, "x");
         }
 
-        wmove(win, y, 2 + padding);
-        waddstr(win, "]: ");
+        wmove(ps->win, y, 2 + ps->padding);
+        waddstr(ps->win, "]: ");
 
-        wmove(win, y, 5 + padding);
-        waddstr(win, todo->data);
+        wmove(ps->win, y, 5 + ps->padding);
+        waddstr(ps->win, todo->data);
 
-        if (active && selected == i) {
-            wattroff(win, COLOR_PAIR(1));
+        if (active && ps->selected == j) {
+            wattroff(ps->win, COLOR_PAIR(1));
         }
 
 
         i += 1;
+        j += 1;
     }
 
-    wmove(win, selected_y, 1 + padding);
+    wmove(ps->win, selected_y, 1 + ps->padding);
 }
 
 char *prompt_text_dialog(const int max_len) {

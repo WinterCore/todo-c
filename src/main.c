@@ -45,6 +45,8 @@ int main() {
     WINDOW *controls_win = create_new_win(0, LINES - 1, COLS, 1);
     keypad(left_win, true);
     keypad(right_win, true);
+    scrollok(left_win, true);
+    scrollok(right_win, true);
 
     render_controls(controls_win);
 
@@ -63,6 +65,7 @@ int main() {
         .todos = pending_todos,
         .selected = 0,
         .padding = 1,
+        .scroll_pos = 0,
     };
 
     struct PaneState right_pane_state = {
@@ -71,6 +74,7 @@ int main() {
         .todos = completed_todos,
         .selected = 0,
         .padding = 1,
+        .scroll_pos = 0,
     };
     
     while (! state.exit) {

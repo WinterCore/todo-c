@@ -9,4 +9,6 @@
 - [ ] Add the ability to specify the location of the data file
 - [ ] Disallow typing special characters in the create todo dialog
 - [ ] Implement line wrapping
-- [ ] Implement scrolling
+- [ ] Add scrolling indicators?
+- [ ] Handle terminal resize
+- [ ] Fix issue with writing which happens randomly where garbage characters get inserted at the end of the file
