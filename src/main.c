@@ -40,28 +40,46 @@ int main() {
     init_pair(2, COLOR_BLACK, COLOR_YELLOW);
     int halfw = COLS / 2;
 
-    WINDOW *left = create_new_win(0, 0, halfw, LINES);
-    WINDOW *right = create_new_win(halfw, 0, halfw, LINES);
-    keypad(left, true);
-    keypad(right, true);
+    WINDOW *left_win = create_new_win(0, 0, halfw, LINES - 1);
+    WINDOW *right_win = create_new_win(halfw, 0, halfw, LINES - 1);
+    WINDOW *controls_win = create_new_win(0, LINES - 1, COLS, 1);
+    keypad(left_win, true);
+    keypad(right_win, true);
 
-    unsigned int active_pane = 0;
-    size_t selected_left = 0;
-    size_t selected_right = 0;
+    render_controls(controls_win);
 
-    struct State state = {
+    struct GlobalState state = {
         .pending_todos = pending_todos,
         .completed_todos = completed_todos,
         .exit = false,
-        .pane = active_pane,
+        .active_pane = 0,
         .should_do_full_render = true,
-        .should_write_to_disk = false
+        .should_write_to_disk = false,
+    };
+
+    struct PaneState left_pane_state = {
+        .win = left_win,
+        .label = "Todo",
+        .todos = pending_todos,
+        .selected = 0,
+        .padding = 1,
+    };
+
+    struct PaneState right_pane_state = {
+        .win = right_win,
+        .label = "Completed",
+        .todos = completed_todos,
+        .selected = 0,
+        .padding = 1,
     };
     
     while (! state.exit) {
+        bool left_active = state.active_pane % 2 == 0;
+        bool right_active = state.active_pane % 2 == 1;
+
         if (state.should_do_full_render) {
-            render(left, pending_todos, selected_left, "Todo");
-            render(right, completed_todos, selected_right, "Completed");
+            render_pane(&left_pane_state, left_active);
+            render_pane(&right_pane_state, right_active);
             state.should_do_full_render = false;
         }
 
@@ -73,10 +91,10 @@ int main() {
             fflush(fd);
         }
 
-        if (state.pane % 2 == 0) {
-            pane_loop(&state, left, pending_todos, &selected_left, "Todo");
-        } else if (state.pane % 2 == 1) {
-            pane_loop(&state, right, completed_todos, &selected_right, "Completed");
+        if (left_active) {
+            pane_loop(&state, &left_pane_state);
+        } else if (right_active) {
+            pane_loop(&state, &right_pane_state);
         }
     }
 

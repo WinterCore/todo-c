@@ -40,9 +40,6 @@ struct Todo* parse_todo(char **data) {
     const char *todo_status = get_todo_status_name(Todo);
     const char *completed_status = get_todo_status_name(Completed);
 
-    // Skip whitespace
-    data += skip_while(is_whitespace, *data);
-
     if (starts_with(*data, todo_status)) {
 
         char *text = consume_todo_text(todo_status, data);
@@ -55,7 +52,7 @@ struct Todo* parse_todo(char **data) {
 
     }
 
-    fprintf(stderr, "ERROR: CORRUPT DATA FILE\n");
+    fprintf(stderr, "ERROR: CORRUPT DATA FILE\n%s\n", *data);
     UNREACHABLE
 }
 
@@ -66,10 +63,15 @@ struct Hector *read_todos(FILE *fd) {
 
     struct Hector *hec = hector_create(sizeof(struct Todo *), 5);
 
+    // Skip whitespace
+    data += skip_while(is_whitespace, data);
+
     while (*data != '\0') {
         struct Todo *todo = parse_todo(&data);
 
         hector_push(hec, todo);
+
+        data += skip_while(is_whitespace, data);
     }
 
     free(data_ptr);

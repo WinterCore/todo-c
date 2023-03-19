@@ -6,15 +6,40 @@
 #include "render.h"
 #include "aids.h"
 
-void render(
+void render_pane(
+    struct PaneState *state,
+    bool active
+) {
+    werase(state->win);
+
+    render_label(state->win, state->label);
+    render_todos(state->win, state->todos, state->selected, active);
+
+    wrefresh(state->win);
+}
+
+void render_controls(WINDOW *win) {
+
+    werase(win);
+    // Render Controls
+    wmove(win, LINES - 1, 1);
+    waddstr(win, "q: Quit - k: Up - j: Down - n: New todo - space: Switch pane - Enter: Toggle todo");
+    wrefresh(win);
+}
+
+void render_label(WINDOW *win, char *label) {
+    // Render label
+    wmove(win, 0, 1);
+    waddstr(win, label);
+}
+
+void render_todos(
     WINDOW *win,
     struct Hector *todos,
     size_t selected,
-    char *label
+    bool active
 ) {
     size_t i = 0;
-
-    werase(win);
 
     box(win, 0, 0);
     int cols = 0;
@@ -24,13 +49,9 @@ void render(
 
     getmaxyx(win, rows, cols);
 
-    // Render label
-    wmove(win, 0, 1);
-    waddstr(win, label);
-
     // Render todos
     while (i < todos->length) {
-        if (selected == i) {
+        if (active && selected == i) {
             wattron(win, COLOR_PAIR(1));
             draw_backlight(win, padding, selected_y, cols - padding * 2, 1);
         }
@@ -51,7 +72,7 @@ void render(
         wmove(win, y, 5 + padding);
         waddstr(win, todo->data);
 
-        if (selected == i) {
+        if (active && selected == i) {
             wattroff(win, COLOR_PAIR(1));
         }
 
@@ -59,12 +80,7 @@ void render(
         i += 1;
     }
 
-    // Render Controls
-    wmove(win, LINES - padding, padding);
-    waddstr(win, " q: Quit  k: Up  j: Down  n: New ");
-
     wmove(win, selected_y, 1 + padding);
-    wrefresh(win);
 }
 
 char *prompt_text_dialog(const int max_len) {
@@ -184,15 +200,12 @@ void draw_backlight(WINDOW *win, int x, int y, int w, int h) {
 }
 
 void pane_loop(
-    struct State *state,
-    WINDOW *win,
-    struct Hector *todos,
-    size_t *selected,
-    char *label
+    struct GlobalState *state,
+    struct PaneState *ps
 ) {
-    render(win, todos, *selected, label);
+    render_pane(ps, true);
 
-    int c = wgetch(win);
+    int c = wgetch(ps->win);
 
     switch (c) {
         case 'q':
@@ -204,8 +217,8 @@ void pane_loop(
         case KEY_UP:
         case 'k':
         case 'K': {
-            if (*selected > 0) {
-                *selected -= 1;
+            if (ps->selected > 0) {
+                ps->selected -= 1;
             }
 
             break;
@@ -214,8 +227,9 @@ void pane_loop(
         case KEY_DOWN:
         case 'j':
         case 'J': {
-            if (todos->length != 0 && *selected < todos->length - 1) {
-                *selected += 1;
+            if (ps->todos->length != 0
+                && ps->selected < ps->todos->length - 1) {
+                ps->selected += 1;
             }
 
             break;
@@ -223,17 +237,17 @@ void pane_loop(
 
         case 'd':
         case 'D': {
-            if (todos->length == 0) {
+            if (ps->todos->length == 0) {
                 break;
             }
 
-            delete_todo(hector_get(todos, *selected));
-            hector_splice(todos, *selected, 1);
+            delete_todo(hector_get(ps->todos, ps->selected));
+            hector_splice(ps->todos, ps->selected, 1);
 
-            size_t todos_num = hector_size(todos);
+            size_t todos_num = hector_size(ps->todos);
 
-            if (*selected >= todos_num && todos_num > 0) {
-                *selected -= 1;
+            if (ps->selected >= todos_num && todos_num > 0) {
+                ps->selected -= 1;
             }
 
             state->should_write_to_disk = true;
@@ -259,25 +273,25 @@ void pane_loop(
 
         case '\n':
         case KEY_ENTER: {
-            if (todos->length == 0) {
+            if (ps->todos->length == 0) {
                 break;
             }
 
-            struct Todo *todo = hector_get(todos, *selected);
+            struct Todo *todo = hector_get(ps->todos, ps->selected);
             toggle_todo_status(todo);
 
             if (todo->status == Todo) {
-                hector_splice(todos, *selected, 1);
+                hector_splice(ps->todos, ps->selected, 1);
                 hector_push(state->pending_todos, todo);
             } else if (todo->status == Completed) {
-                hector_splice(todos, *selected, 1);
+                hector_splice(ps->todos, ps->selected, 1);
                 hector_push(state->completed_todos, todo);
             }
 
-            size_t todos_num = hector_size(todos);
+            size_t todos_num = hector_size(ps->todos);
 
-            if (*selected >= todos_num && todos_num > 0) {
-                *selected -= 1;
+            if (ps->selected >= todos_num && todos_num > 0) {
+                ps->selected -= 1;
             }
 
             state->should_do_full_render = true;
@@ -287,7 +301,8 @@ void pane_loop(
         };
 
         case ' ': {
-            state->pane += 1;
+            state->active_pane ^= 1;
+            state->should_do_full_render = true;
 
             break;
         };
